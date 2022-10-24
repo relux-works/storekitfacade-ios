@@ -17,7 +17,6 @@ let package = Package(
             dependencies: [],
             path: "Sources",
             linkerSettings: [
-               .linkedFramework("StoreKit")
            ]
         ),
         .testTarget(

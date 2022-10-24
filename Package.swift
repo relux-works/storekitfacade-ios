@@ -6,7 +6,7 @@ let package = Package(
     name: "storekitfacade-ios",
     products: [
         .library(
-            name: "storekitfacade-ios",
+            name: "StoreKitFacade",
             targets: ["storekitfacade-ios"]),
     ],
     dependencies: [

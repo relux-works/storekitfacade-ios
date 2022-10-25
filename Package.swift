@@ -4,16 +4,20 @@ import PackageDescription
 
 let package = Package(
     name: "storekitfacade-ios",
+    platforms: [
+        .iOS(.v15),
+    ],
     products: [
         .library(
             name: "StoreKitFacade",
-            targets: ["storekitfacade-ios"]),
+            type: .dynamic,
+            targets: ["StoreKitFacade"]),
     ],
     dependencies: [
     ],
     targets: [
         .target(
-            name: "storekitfacade-ios",
+            name: "StoreKitFacade",
             dependencies: [],
             path: "Sources",
             linkerSettings: [
@@ -21,7 +25,7 @@ let package = Package(
         ),
         .testTarget(
             name: "storekitfacade-iosTests",
-            dependencies: ["storekitfacade-ios"],
+            dependencies: ["StoreKitFacade"],
             path: "Tests"
         ),
     ]

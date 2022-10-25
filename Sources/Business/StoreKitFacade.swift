@@ -3,10 +3,9 @@ import Combine
 
 public protocol IStoreKitFacade {
     var transactionsStateChangePub: AnyPublisher<Void, Never> { get }
-    func purchaseMembership(billingItem: SKFBillingPlan.BillingItem) async -> Result<Void, SKFError>
-    func getCurrentEntitlements() async -> [Transaction]
-    func getActiveMembership(for availablePlans: [SKFBillingPlan]) async throws -> SKFSubscription?
-    func verifyAvailableMemberships(for availablePlans: [SKFBillingPlan]) async -> Result<[SKFBillingPlan], SKFError>
+    func purchase(billingItem: SKFBillingPlan.BillingItem) async -> Result<Void, SKFError>
+    func getActiveRenewableSubscription(for availablePlans: [SKFBillingPlan]) async throws -> SKFSubscription?
+    func verifyAvailableRenewableSubscriptions(for availablePlans: [SKFBillingPlan]) async -> Result<[SKFBillingPlan], SKFError>
 }
 
 public class StoreKitFacade: IStoreKitFacade {
@@ -25,7 +24,7 @@ public class StoreKitFacade: IStoreKitFacade {
         transactionsListenerTask?.cancel()
     }
 
-    public func purchaseMembership(billingItem: SKFBillingPlan.BillingItem) async -> Result<Void, SKFError> {
+    public func purchase(billingItem: SKFBillingPlan.BillingItem) async -> Result<Void, SKFError> {
         do {
             let product = try await getStoreProducts(for: [billingItem]).first
 
@@ -47,23 +46,7 @@ public class StoreKitFacade: IStoreKitFacade {
         }
     }
 
-    public func getCurrentEntitlements() async -> [Transaction] {
-        var validTransactions: [Transaction] = []
-        //Iterate through all of the user's purchased products.
-        for await result in Transaction.currentEntitlements {
-            do {
-                //Check whether the transaction is verified. If it isn’t, catch `failedVerification` error.
-                let transaction: Transaction = try checkVerified(result)
-                validTransactions.append(transaction)
-            } catch {
-                print("INVALID TRANSACTION")
-            }
-        }
-
-        return validTransactions
-    }
-
-    public func getActiveMembership(for availablePlans: [SKFBillingPlan]) async throws -> SKFSubscription? {
+    public func getActiveRenewableSubscription(for availablePlans: [SKFBillingPlan]) async throws -> SKFSubscription? {
         let transactionIds = await getCurrentEntitlements()
                 .filter( { $0.productType.contained(in: [.autoRenewable])})
                 .map { $0.productID }
@@ -91,7 +74,7 @@ public class StoreKitFacade: IStoreKitFacade {
         )
     }
 
-    public func verifyAvailableMemberships(for availablePlans: [SKFBillingPlan]) async -> Result<[SKFBillingPlan], SKFError> {
+    public func verifyAvailableRenewableSubscriptions(for availablePlans: [SKFBillingPlan]) async -> Result<[SKFBillingPlan], SKFError> {
         do {
             let allProducts = try await getStoreProducts(for: availablePlans.flatMap {$0.subscriptionKinds})
             let plans: [SKFBillingPlan] = availablePlans
@@ -109,6 +92,22 @@ public class StoreKitFacade: IStoreKitFacade {
         } catch {
             return .failure(.failedToVerifyMembershipBillingItems(cause: error))
         }
+    }
+
+    private func getCurrentEntitlements() async -> [Transaction] {
+        var validTransactions: [Transaction] = []
+        //Iterate through all of the user's purchased products.
+        for await result in Transaction.currentEntitlements {
+            do {
+                //Check whether the transaction is verified. If it isn’t, catch `failedVerification` error.
+                let transaction: Transaction = try checkVerified(result)
+                validTransactions.append(transaction)
+            } catch {
+                print("INVALID TRANSACTION")
+            }
+        }
+
+        return validTransactions
     }
 
     private func getStoreProducts(for billingItems: [SKFBillingPlan.BillingItem]) async throws -> [Product] {
@@ -138,7 +137,7 @@ public class StoreKitFacade: IStoreKitFacade {
         }
     }
 
-    private func purchase(_ product: Product) async throws -> PurchaseStatus {
+    private func purchase(_ product: Product) async throws -> SKFPurchaseStatus {
         switch  try await product.purchase() {
         case .success(let verification):
             let transaction = try checkVerified(verification)

@@ -1,6 +1,6 @@
 import Foundation
 
-public enum PurchaseStatus {
+public enum SKFPurchaseStatus {
     case undefined
     case pending
     case userCanceled

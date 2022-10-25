@@ -9,6 +9,6 @@ public enum SKFError: Error {
 
     public enum Cause: Error {
         case noProductFound
-        case purchaseStatus(s: PurchaseStatus)
+        case purchaseStatus(s: SKFPurchaseStatus)
     }
 }

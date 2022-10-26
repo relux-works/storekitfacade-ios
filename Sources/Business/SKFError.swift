@@ -1,5 +1,6 @@
 import Foundation
 
+
 public enum SKFError: Error {
     case failedToGetCurrentSubscription(cause: Error)
     case invalidProduct

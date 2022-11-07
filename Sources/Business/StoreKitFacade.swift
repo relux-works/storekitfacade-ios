@@ -10,12 +10,18 @@ public protocol IStoreKitFacade {
 
 public class StoreKitFacade: IStoreKitFacade {
     private var transactionsListenerTask: Task<Void, Error>? = nil
+    private var pipelines: Set<AnyCancellable> = []
+    private var skTransactionCoordinator: SKFTransactionObserver
 
     private let transactionsStateChangeSub: PassthroughSubject<Void, Never> = .init()
     public var transactionsStateChangePub: AnyPublisher<Void, Never> { transactionsStateChangeSub.eraseToAnyPublisher() }
 
 
     public init() {
+        skTransactionCoordinator = .init()
+        skTransactionCoordinator.transactionsStateChangePub
+                .sink { [weak self] in self?.transactionsStateChangeSub.send(()) }
+                .store(in: &pipelines)
         transactionsListenerTask = listenForTransactions()
         transactionsStateChangeSub.send()
     }
@@ -150,6 +156,39 @@ public class StoreKitFacade: IStoreKitFacade {
         default:
             return .undefined
         }
+    }
+}
+
+private class SKFTransactionObserver: NSObject, SKPaymentTransactionObserver {
+    private let transactionsStateChangeSub: PassthroughSubject<Void, Never> = .init()
+    public var transactionsStateChangePub: AnyPublisher<Void, Never> { transactionsStateChangeSub.eraseToAnyPublisher() }
+
+    override init() {
+        super.init()
+        SKPaymentQueue.default().add(self)
+    }
+    deinit {
+        SKPaymentQueue.default().remove(self)
+    }
+
+    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+        transactions
+            .forEach { t in
+                switch t.transactionState {
+                case .purchased,
+                     .failed,
+                     .restored:
+                    SKPaymentQueue.default().finishTransaction(t)
+                case .purchasing:
+                    break
+                case .deferred:
+                    break
+                @unknown default:
+                    break
+                }
+            }
+
+        transactionsStateChangeSub.send(())
     }
 }
 

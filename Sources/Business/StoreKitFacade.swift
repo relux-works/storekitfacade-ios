@@ -3,6 +3,7 @@ import Combine
 
 public protocol IStoreKitFacade {
     var transactionsStateChangePub: AnyPublisher<Void, Never> { get }
+    func presentCodeRedemptionSheet()
     func purchase(billingItem: SKFBillingPlan.BillingItem) async -> Result<Void, SKFError>
     func getActiveRenewableSubscription(for availablePlans: [SKFBillingPlan]) async throws -> SKFSubscription?
     func verifyAvailableRenewableSubscriptions(for availablePlans: [SKFBillingPlan]) async -> Result<[SKFBillingPlan], SKFError>
@@ -28,6 +29,10 @@ public class StoreKitFacade: IStoreKitFacade {
 
     deinit {
         transactionsListenerTask?.cancel()
+    }
+
+    public func presentCodeRedemptionSheet() {
+        SKPaymentQueue.default().presentCodeRedemptionSheet()
     }
 
     public func purchase(billingItem: SKFBillingPlan.BillingItem) async -> Result<Void, SKFError> {

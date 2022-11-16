@@ -1,9 +1,12 @@
 import StoreKit
 import Combine
 
+
 public protocol IStoreKitFacade {
-    var transactionsStateChangePub: AnyPublisher<Void, Never> { get }
+var transactionsStateChangePub: AnyPublisher<Void, Never> { get }
+    @available(iOS 16, *)
     var messageStateChangePub: AnyPublisher<StoreKit.Message, Never> { get }
+
     var subscriptionStatusChangePub: AnyPublisher<Product.SubscriptionInfo.Status, Never> { get }
 
     func presentCodeRedemptionSheet()
@@ -26,8 +29,14 @@ public class StoreKitFacade: IStoreKitFacade {
     private let transactionsStateChangeSub: PassthroughSubject<Void, Never> = .init()
     public var transactionsStateChangePub: AnyPublisher<Void, Never> { transactionsStateChangeSub.eraseToAnyPublisher() }
 
-    private let messageStateChangeSub: PassthroughSubject<StoreKit.Message, Never> = .init()
-    public var messageStateChangePub: AnyPublisher<StoreKit.Message, Never> { messageStateChangeSub.eraseToAnyPublisher() }
+    private var messageStateChangeSub: PassthroughSubject<Any, Never> = .init()
+
+    @available(iOS 16, *)
+    public var messageStateChangePub: AnyPublisher<StoreKit.Message, Never> {
+        messageStateChangeSub
+                .compactMap { $0 as? StoreKit.Message }
+                .eraseToAnyPublisher()
+    }
 
     private let subscriptionStatusChangeSub: PassthroughSubject<Product.SubscriptionInfo.Status, Never> = .init()
     public var subscriptionStatusChangePub: AnyPublisher<Product.SubscriptionInfo.Status, Never> { subscriptionStatusChangeSub.eraseToAnyPublisher() }
@@ -38,7 +47,7 @@ public class StoreKitFacade: IStoreKitFacade {
                 .sink { [weak self] in self?.transactionsStateChangeSub.send(()) }
                 .store(in: &pipelines)
         transactionsListenerTask = listenForTransactions()
-        messageListenerTask = listenForMessages()
+        if #available(iOS 16, *) { messageListenerTask = listenForMessages() }
         subscriptionStatusListenerTask = listenForSubscriptionStatusChange()
         transactionsStateChangeSub.send()
     }
@@ -204,6 +213,7 @@ public class StoreKitFacade: IStoreKitFacade {
         }
     }
 
+    @available(iOS 16, *)
     private func listenForMessages() -> Task<Void, Error> {
         Task.detached { [weak self] in
             for await msg in StoreKit.Message.messages {
@@ -215,6 +225,13 @@ public class StoreKitFacade: IStoreKitFacade {
     private func listenForSubscriptionStatusChange() -> Task<Void, Error> {
         Task.detached { [weak self] in
             for await status in Product.SubscriptionInfo.Status.updates {
+// todo: deal with payment increase statuses
+
+//                let payload = try? status.renewalInfo.payloadValue
+//                payload?.priceIncreaseStatus == .agreed
+//                payload?.expirationReason == .didNotConsentToPriceIncrease
+//                payload?.willAutoRenew
+
                 guard let transaction = try self?.checkVerified(status.transaction) else { continue }
                 await transaction.finish()
 

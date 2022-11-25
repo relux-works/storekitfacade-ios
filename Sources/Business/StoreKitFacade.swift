@@ -304,7 +304,8 @@ extension StoreKitFacade {
                 info: .init(
                         displayName: product.displayName,
                         description: product.description,
-                        displayPrice: product.displayPrice
+                        displayPrice: product.displayPrice,
+                        price: product.price
                 )
         )
     }

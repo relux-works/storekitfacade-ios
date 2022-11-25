@@ -59,15 +59,18 @@ extension SKFBillingPlan.BillingItem {
         public let displayName: String
         public let description: String
         public let displayPrice: String
+        public let price: Decimal
 
         public init(
                 displayName: String,
                 description: String,
-                displayPrice: String
+                displayPrice: String,
+                price: Decimal
         ) {
             self.displayName = displayName
             self.description = description
             self.displayPrice = displayPrice
+            self.price = price
         }
     }
 
